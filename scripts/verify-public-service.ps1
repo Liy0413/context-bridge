@@ -3,7 +3,9 @@ param(
   [Parameter(Mandatory = $true)]
   [string]$ServiceUrl,
 
-  [switch]$AllowHttp
+  [switch]$AllowHttp,
+
+  [switch]$AllowReportedUrlMismatch
 )
 
 $ErrorActionPreference = "Stop"
@@ -21,7 +23,11 @@ if (-not $health.ok -or $health.service -ne "context-bridge") {
 $info = Invoke-RestMethod -Uri "$serviceBase/info" -TimeoutSec 15
 $expectedMcpUrl = "$serviceBase/mcp"
 if ($info.mcpEndpoint -ne $expectedMcpUrl) {
-  throw "The service reports '$($info.mcpEndpoint)' instead of '$expectedMcpUrl'. Check PUBLIC_BASE_URL."
+  if ($AllowReportedUrlMismatch) {
+    Write-Warning "The service reports '$($info.mcpEndpoint)' instead of '$expectedMcpUrl'. This is expected only for a temporary tunnel."
+  } else {
+    throw "The service reports '$($info.mcpEndpoint)' instead of '$expectedMcpUrl'. Check PUBLIC_BASE_URL."
+  }
 }
 
 $unauthorized = $false

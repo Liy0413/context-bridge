@@ -55,7 +55,13 @@ This path does not require OpenAI Platform and can be free, but the URL changes 
    ```
 
 4. Copy the generated `https://...trycloudflare.com` URL.
-5. Verify it with `scripts/verify-public-service.ps1`.
+5. Verify it while allowing the expected local `/info` URL:
+
+   ```powershell
+   .\scripts\verify-public-service.ps1 `
+     -ServiceUrl https://random-name.trycloudflare.com `
+     -AllowReportedUrlMismatch
+   ```
 
 Do not publish a Quick Tunnel URL in a stable release. For a lasting Cloudflare setup, create a named tunnel and attach a domain you control.
 
