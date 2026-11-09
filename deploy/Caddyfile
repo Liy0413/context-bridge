@@ -1,0 +1,9 @@
+{$CONTEXT_BRIDGE_DOMAIN} {
+	encode zstd gzip
+	reverse_proxy context-bridge:8787
+
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		-Server
+	}
+}

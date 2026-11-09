@@ -7,3 +7,4 @@ credentials.local.json
 connection.local.json
 .env.production
 *.log
+.tools/

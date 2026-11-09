@@ -1,6 +1,6 @@
 # Architecture
 
-Context Bridge uses GitHub for distribution and one shared MCP service for live collaboration.
+Context Bridge uses GitHub for distribution and one ordinary public HTTPS service for live collaboration. It does not require OpenAI Platform or Secure MCP Tunnel.
 
 ```text
 GitHub repository
@@ -18,6 +18,7 @@ Device C ─┘
 - GitHub distributes plugin files, installation metadata, source code, and updates.
 - The shared MCP service owns identities, memberships, invites, checkpoints, and audit-relevant timestamps.
 - Devices install the plugin and connect to the same `mcp.json` URL. They do not run separate stores.
+- The HTTPS endpoint may be hosted on a VPS, container platform, or another Node.js host. OpenAI Platform Tunnel is not part of the runtime path.
 - Git or a separate object store carries large project files. Checkpoints carry context, hashes, and source references.
 
 ## Invite onboarding
@@ -32,4 +33,10 @@ Invite codes and issued API keys are SHA-256 hashed before persistence. Producti
 
 ## Deployment invariant
 
-Every installed plugin must point at the same stable HTTPS MCP endpoint. Running one isolated server per device creates unrelated workspaces and is not a supported collaboration topology.
+Every installed plugin must point at the same stable HTTPS MCP endpoint. The same origin also serves `/onboarding/join`, so invitation onboarding works from a new device before it has an API key. Running one isolated server per device creates unrelated workspaces and is not a supported collaboration topology.
+
+## Network boundary
+
+The public reverse proxy forwards only the Context Bridge HTTP routes to the single service instance. The service itself may remain on a private container network. TLS terminates at the reverse proxy, and `TRUST_PROXY=1` tells Express to trust exactly that proxy hop when applying onboarding rate limits.
+
+For temporary development, a third-party tunnel may forward a random HTTPS URL to `127.0.0.1:8787`. That proves connectivity but is not a distribution endpoint because the URL changes and depends on the operator's computer remaining online.
