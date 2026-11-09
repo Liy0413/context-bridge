@@ -31,7 +31,7 @@ Codex 账号 C / 设备 C ─┘
 - 开发认证：邀请引导后签发个人 API Key，仅用于本地/私有测试。
 - 生产认证：必须替换成 OAuth 2.1 + PKCE、稳定 profile ID、scope 和服务端令牌校验。
 
-所有设备必须连接 `mcp.json` 中同一个 HTTPS 地址。设备不得各自运行独立数据仓库，否则邀请码和工作区无法互认。详细设计见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+所有设备必须连接 `mcp.json` 中同一个普通公网 HTTPS 地址。设备不得各自运行独立数据仓库，否则邀请码和工作区无法互认。该架构不依赖 OpenAI Platform Tunnel；任何能够长期运行 Node.js、保存持久化数据并提供 HTTPS 的主机都可以承载服务。详细设计见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
 ## 服务端开发
 
@@ -67,7 +67,7 @@ npm run typecheck
 
 ## 发布和安装
 
-1. 服务端运营者按照 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) 部署唯一的 HTTPS MCP 服务。
+1. 服务端运营者按照 [`docs/DEPLOYMENT.md`](docs/DEPLOYMENT.md) 部署唯一的公网 HTTPS MCP 服务。正式环境可使用带域名的 VPS + Caddy；临时测试可使用 Cloudflare Quick Tunnel。
 2. 运行 `scripts/configure-distribution.ps1` 写入 GitHub 仓库和服务地址。
 3. 将仓库发布到 GitHub；其他设备通过 GitHub marketplace 安装插件。
 4. 账号 A 创建 workspace 和一次性 `editor`/`viewer` 邀请。
@@ -87,6 +87,7 @@ npm run typecheck
 ## 当前限制
 
 - JSON 存储只适合单进程开发；
+- Cloudflare Quick Tunnel URL 会在重启后变化，只能用于临时测试；
 - API Key 方案不适合公开插件提交；
 - 单个内联文件最大 256 KiB，每个检查点内联内容合计最大 2 MiB；
 - 还没有对象存储上传、OAuth 服务、管理 UI 和端到端加密。

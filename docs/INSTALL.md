@@ -1,6 +1,8 @@
 # Install on another device
 
-The repository owner publishes the plugin through its GitHub marketplace. A client device then:
+The repository owner publishes the plugin through its GitHub marketplace. The installed `mcp.json` already points to the shared public HTTPS service; no OpenAI Platform Tunnel or local server is required on a client device.
+
+A client device then:
 
 1. Installs the marketplace:
 
@@ -19,4 +21,4 @@ The repository owner publishes the plugin through its GitHub marketplace. A clie
 5. Uses the `apiKey` stored in `connection.local.json` when the plugin asks for its bearer credential.
 6. Starts a new Codex conversation and asks Context Bridge to resume the latest checkpoint.
 
-The device must not start its own Context Bridge server. All devices use the shared HTTPS endpoint already embedded in `mcp.json`.
+The device must not start its own Context Bridge server. All devices use the shared HTTPS endpoint already embedded in `mcp.json`. If `join-workspace.ps1` reports that the URL is still `bridge.example.com`, the repository owner has not yet configured a real deployment.
