@@ -76,6 +76,34 @@ Codex 账号 C / 设备 C ─┘
 
 如果脚本无法连接，先检查 `mcp.json` 中的域名是否仍可访问。Quick Tunnel 停止或重启后，旧域名会立即失效。
 
+### 同一局域网快速加入
+
+保留上面的 GitHub / 公网方式不变。服务端还可以选择开启局域网发现，让同一可信 Wi-Fi 或有线网络中的新设备自动找到唯一的 Context Bridge 服务，不必填写地址。
+
+服务端设备：
+
+1. 在 `server/.env` 中启用：
+
+   ```dotenv
+   CONTEXT_BRIDGE_LAN_DISCOVERY=1
+   CONTEXT_BRIDGE_LAN_DISCOVERY_PORT=8788
+   ```
+
+2. 重新启动 Context Bridge。
+3. Windows 首次使用时，以管理员身份运行：
+
+   ```powershell
+   .\scripts\enable-lan-access.ps1
+   ```
+
+新设备只需运行：
+
+```powershell
+.\scripts\join-workspace-lan.ps1 -DisplayName "My laptop"
+```
+
+脚本通过 UDP 8788 自动发现服务，验证 `/health` 身份后，再要求输入原有的一次性邀请码。共享数据仍写入同一个服务端存储，不会创建第二套工作区。局域网加入使用 HTTP，只适合受信任的家庭或办公室私有网络；不应在酒店、机场、访客 Wi-Fi 或其他不可信网络中使用。离开局域网后，继续使用仓库 `mcp.json` 中的公网 HTTPS 地址。
+
 ## 服务端开发
 
 下面的脚本仅供服务端运营者开发和测试。普通客户端设备不运行服务。

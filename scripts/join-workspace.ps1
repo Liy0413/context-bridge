@@ -1,7 +1,8 @@
 [CmdletBinding()]
 param(
   [string]$ServiceUrl,
-  [string]$DisplayName
+  [string]$DisplayName,
+  [switch]$AllowPrivateHttp
 )
 
 $ErrorActionPreference = "Stop"
@@ -14,8 +15,32 @@ if (-not $ServiceUrl) {
   $ServiceUrl = $ServiceUrl -replace "/mcp$", ""
 }
 
-if ($ServiceUrl -match "example\.com" -or $ServiceUrl -notmatch "^https://") {
-  throw "The repository has not been configured with a production HTTPS service URL."
+function Test-PrivateIPv4([string]$HostName) {
+  $address = $null
+  if (-not [System.Net.IPAddress]::TryParse($HostName, [ref]$address)) {
+    return $false
+  }
+  if ($address.AddressFamily -ne [System.Net.Sockets.AddressFamily]::InterNetwork) {
+    return $false
+  }
+  $bytes = $address.GetAddressBytes()
+  return (
+    $bytes[0] -eq 10 -or
+    ($bytes[0] -eq 172 -and $bytes[1] -ge 16 -and $bytes[1] -le 31) -or
+    ($bytes[0] -eq 192 -and $bytes[1] -eq 168) -or
+    ($bytes[0] -eq 169 -and $bytes[1] -eq 254) -or
+    $bytes[0] -eq 127
+  )
+}
+
+$serviceUri = [System.Uri]$ServiceUrl
+$isPrivateHttp = (
+  $AllowPrivateHttp -and
+  $serviceUri.Scheme -eq "http" -and
+  (Test-PrivateIPv4 $serviceUri.Host)
+)
+if ($ServiceUrl -match "example\.com" -or ($serviceUri.Scheme -ne "https" -and -not $isPrivateHttp)) {
+  throw "Use a configured HTTPS service URL, or the LAN helper for a trusted private network."
 }
 
 if (-not $DisplayName) {

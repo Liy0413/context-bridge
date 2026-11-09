@@ -11,6 +11,8 @@ GitHub repository
 Device A ─┐
 Device B ─┼── HTTPS ── one shared MCP service ── persistent store
 Device C ─┘
+
+Trusted LAN device ── UDP discovery + HTTP onboarding ──┘
 ```
 
 ## Responsibilities
@@ -30,6 +32,12 @@ Device C ─┘
 5. The user supplies that key when the installed plugin requests authentication.
 
 Invite codes and issued API keys are SHA-256 hashed before persistence. Production should replace API-key bootstrap with OAuth 2.1 while retaining the same workspace membership model.
+
+## Optional LAN discovery
+
+When explicitly enabled, the same service also listens for the fixed `CONTEXT_BRIDGE_DISCOVER_V1` datagram on UDP 8788. It replies only to the sender with non-secret metadata: protocol version, service ID, HTTP port, and the fact that an invite is required. The client constructs the private IPv4 URL from the UDP sender address, verifies `/health`, and then uses the existing invitation onboarding endpoint.
+
+This is discovery of the existing central service, not peer-to-peer replication and not a second data store. It is disabled by default, uses no API keys in UDP packets, and must be limited by the host firewall to private networks. Because onboarding is plain HTTP on the LAN, it is intended only for trusted home or office networks; public HTTPS remains the normal transport outside the LAN.
 
 ## Deployment invariant
 

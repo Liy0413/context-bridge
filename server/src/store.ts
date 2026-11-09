@@ -71,11 +71,12 @@ export class JsonStore {
   private async mutate<T>(operation: () => T): Promise<T> {
     await this.ready;
     let result!: T;
-    this.writeChain = this.writeChain.then(async () => {
+    const pending = this.writeChain.then(async () => {
       result = operation();
       await this.persist();
     });
-    await this.writeChain;
+    this.writeChain = pending.catch(() => undefined);
+    await pending;
     return result;
   }
 
