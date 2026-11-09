@@ -33,6 +33,49 @@ Codex 账号 C / 设备 C ─┘
 
 所有设备必须连接 `mcp.json` 中同一个普通公网 HTTPS 地址。设备不得各自运行独立数据仓库，否则邀请码和工作区无法互认。该架构不依赖 OpenAI Platform Tunnel；任何能够长期运行 Node.js、保存持久化数据并提供 HTTPS 的主机都可以承载服务。详细设计见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
 
+## 临时跨设备测试
+
+当前 `main` 分支可临时指向一个 Cloudflare Quick Tunnel。只有运行服务和隧道的主机保持在线时，该地址才有效；隧道重启后必须重新运行 `configure-distribution.ps1` 并更新仓库。
+
+### 账号 A：创建共享工作区和邀请码
+
+1. 安装 GitHub marketplace：
+
+   ```sh
+   codex plugin marketplace add Liy0413/context-bridge
+   ```
+
+2. 安装并启用 `context-bridge`，认证方式选择 Bearer API Key。
+3. 服务运营者使用本机 `credentials.local.json` 中一个 owner 身份的 `apiKey` 完成首次认证。不要提交或发送该文件。
+4. 在 Codex / ChatGPT 中要求 Context Bridge：
+
+   ```text
+   创建一个名为“测试工作区”的共享工作区，然后创建一个 24 小时有效的 editor 邀请码。
+   ```
+
+5. 只把一次性邀请码交给要加入的账号，不要共享 owner API Key。
+
+### 账号 B / 新设备：只用邀请码加入
+
+1. 克隆仓库并进入目录：
+
+   ```powershell
+   git clone https://github.com/Liy0413/context-bridge.git
+   cd context-bridge
+   ```
+
+2. 运行加入脚本：
+
+   ```powershell
+   .\scripts\join-workspace.ps1 -DisplayName "My laptop"
+   ```
+
+3. 输入一次性邀请码。脚本会把个人 API Key 保存到被 Git 忽略的 `connection.local.json`。
+4. 安装插件，并使用 `connection.local.json` 中的 `apiKey` 完成 Bearer 认证。
+5. 账号 A 调用 `publish_checkpoint`，账号 B 调用 `get_latest_checkpoint` 验证共享。
+
+如果脚本无法连接，先检查 `mcp.json` 中的域名是否仍可访问。Quick Tunnel 停止或重启后，旧域名会立即失效。
+
 ## 服务端开发
 
 下面的脚本仅供服务端运营者开发和测试。普通客户端设备不运行服务。

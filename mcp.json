@@ -3,7 +3,7 @@
   "mcpServers": {
     "context_bridge": {
       "type": "streamable-http",
-      "url": "https://bridge.example.com/mcp",
+      "url": "https://joel-unlock-acknowledge-extended.trycloudflare.com/mcp",
       "extensions": {
         "com.openai": {
           "auth": {
