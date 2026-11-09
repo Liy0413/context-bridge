@@ -33,6 +33,8 @@ $envLines = @(
   "CONTEXT_BRIDGE_DATA=./data/store.json"
   "CONTEXT_BRIDGE_SERVICE_ID=context-bridge-dev"
   "PUBLIC_BASE_URL=http://localhost:8787"
+  "CONTEXT_BRIDGE_LAN_DISCOVERY=1"
+  "CONTEXT_BRIDGE_LAN_DISCOVERY_PORT=8788"
   "CONTEXT_BRIDGE_USERS=$usersJson"
 )
 [System.IO.File]::WriteAllLines($envPath, $envLines, [System.Text.UTF8Encoding]::new($false))

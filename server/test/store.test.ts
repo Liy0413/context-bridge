@@ -74,3 +74,16 @@ test("invite onboarding stores only hashes and issues a working credential", asy
   assert.equal(persisted.includes(invite.code), false);
   assert.equal(persisted.includes(joined.apiKey), false);
 });
+
+test("a failed mutation does not poison later writes", async () => {
+  const directory = await testDirectory();
+  const store = new JsonStore(join(directory, "store.json"));
+  const alice = { id: "usr_alice", displayName: "Alice" };
+  const workspace = await store.createWorkspace(alice, "Demo");
+
+  await assert.rejects(store.joinWithInvite("invalid-invite-code-1234", "Bob"), /invalid/i);
+
+  const invite = await store.createInvite(workspace.id, alice.id, "editor", 24);
+  assert.equal(invite.workspaceId, workspace.id);
+  assert.equal(invite.role, "editor");
+});

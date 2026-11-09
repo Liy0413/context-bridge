@@ -3,7 +3,7 @@
   "mcpServers": {
     "context_bridge": {
       "type": "streamable-http",
-      "url": "https://joel-unlock-acknowledge-extended.trycloudflare.com/mcp",
+      "url": "https://full-tramadol-evening-propecia.trycloudflare.com/mcp",
       "extensions": {
         "com.openai": {
           "auth": {

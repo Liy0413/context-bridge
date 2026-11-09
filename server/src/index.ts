@@ -1,6 +1,7 @@
 import express from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { ApiKeyAuthenticator } from "./auth.js";
+import { startLanDiscovery } from "./lan-discovery.js";
 import { createMcpServer } from "./mcp.js";
 import { JsonStore } from "./store.js";
 
@@ -9,9 +10,18 @@ const dataPath = process.env.CONTEXT_BRIDGE_DATA ?? "./data/store.json";
 const serviceId = process.env.CONTEXT_BRIDGE_SERVICE_ID ?? "context-bridge-local";
 const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`;
 const isProduction = process.env.NODE_ENV === "production";
+const lanDiscoveryEnabled = process.env.CONTEXT_BRIDGE_LAN_DISCOVERY === "1";
+const lanDiscoveryPort = Number(process.env.CONTEXT_BRIDGE_LAN_DISCOVERY_PORT ?? 8788);
 
 if (!Number.isInteger(port) || port < 1 || port > 65535) {
   throw new Error("PORT must be an integer between 1 and 65535");
+}
+
+if (
+  lanDiscoveryEnabled &&
+  (!Number.isInteger(lanDiscoveryPort) || lanDiscoveryPort < 1 || lanDiscoveryPort > 65535)
+) {
+  throw new Error("CONTEXT_BRIDGE_LAN_DISCOVERY_PORT must be an integer between 1 and 65535");
 }
 
 if (isProduction) {
@@ -151,6 +161,21 @@ app.use((error: unknown, _request: express.Request, response: express.Response, 
   response.status(500).json({ error: "internal_error" });
 });
 
-app.listen(port, () => {
-  console.log(`Context Bridge listening on http://localhost:${port}`);
+const httpServer = app.listen(port, "0.0.0.0", () => {
+  console.log(`Context Bridge listening on http://0.0.0.0:${port}`);
 });
+
+const lanDiscoverySocket = startLanDiscovery(
+  lanDiscoveryEnabled,
+  serviceId,
+  port,
+  lanDiscoveryPort,
+);
+
+function shutdown() {
+  lanDiscoverySocket?.close();
+  httpServer.close(() => process.exit(0));
+}
+
+process.once("SIGINT", shutdown);
+process.once("SIGTERM", shutdown);
