@@ -1,0 +1,32 @@
+{
+  "$schema": "https://agent-plugins.org/schemas/1.0.0/plugin.schema.json",
+  "name": "context-bridge",
+  "version": "0.1.0",
+  "description": "Share explicit Codex work checkpoints and related project artifacts across accounts and devices.",
+  "author": {
+    "name": "Context Bridge contributors"
+  },
+  "homepage": "https://github.com/Liy0413/context-bridge#readme",
+  "repository": "https://github.com/Liy0413/context-bridge",
+  "license": "MIT",
+  "keywords": ["codex", "sync", "context", "collaboration"],
+  "extensions": {
+    "com.openai": {
+      "onboardingSkill": "./skills/context-bridge/SKILL.md",
+      "interface": {
+        "displayName": "Context Bridge",
+        "shortDescription": "Resume Codex work across accounts and devices",
+        "longDescription": "Creates shared workspaces containing explicit checkpoints, decisions, next steps, file manifests, and small related artifacts.",
+        "developerName": "Context Bridge contributors",
+        "category": "Productivity",
+        "capabilities": ["Read", "Write"],
+        "brandColor": "#2563EB",
+        "defaultPrompt": [
+          "Publish a checkpoint for my current work.",
+          "Resume from the latest shared checkpoint.",
+          "Invite another account to this shared workspace."
+        ]
+      }
+    }
+  }
+}

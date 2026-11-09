@@ -1,0 +1,9 @@
+server/node_modules/
+server/dist/
+server/data/
+server/.env
+server/.test-data/
+credentials.local.json
+connection.local.json
+.env.production
+*.log

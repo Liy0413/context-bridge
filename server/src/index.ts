@@ -1,0 +1,106 @@
+import express from "express";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import { ApiKeyAuthenticator } from "./auth.js";
+import { createMcpServer } from "./mcp.js";
+import { JsonStore } from "./store.js";
+
+const port = Number(process.env.PORT ?? 8787);
+const dataPath = process.env.CONTEXT_BRIDGE_DATA ?? "./data/store.json";
+const serviceId = process.env.CONTEXT_BRIDGE_SERVICE_ID ?? "context-bridge-local";
+const publicBaseUrl = process.env.PUBLIC_BASE_URL ?? `http://localhost:${port}`;
+const store = new JsonStore(dataPath);
+const authenticator = new ApiKeyAuthenticator(process.env.CONTEXT_BRIDGE_USERS, store);
+const app = express();
+const onboardingAttempts = new Map<string, { count: number; resetAt: number }>();
+
+app.use(express.json({ limit: "4mb" }));
+
+app.get("/health", (_request, response) => {
+  response.json({
+    ok: true,
+    service: "context-bridge",
+    serviceId,
+    version: "0.1.0",
+    mode: "single-shared-service",
+  });
+});
+
+app.get("/info", (_request, response) => {
+  response.json({
+    service: "context-bridge",
+    serviceId,
+    version: "0.1.0",
+    mcpEndpoint: `${publicBaseUrl.replace(/\/$/, "")}/mcp`,
+    architecture: "github-distribution-central-mcp",
+  });
+});
+
+app.post("/onboarding/join", async (request, response) => {
+  const client = request.ip || "unknown";
+  const now = Date.now();
+  const attempt = onboardingAttempts.get(client);
+  if (!attempt || attempt.resetAt <= now) {
+    onboardingAttempts.set(client, { count: 1, resetAt: now + 10 * 60 * 1000 });
+  } else if (attempt.count >= 10) {
+    response.status(429).json({ error: "rate_limited" });
+    return;
+  } else {
+    attempt.count += 1;
+  }
+
+  const inviteCode = typeof request.body?.inviteCode === "string" ? request.body.inviteCode : "";
+  const displayName = typeof request.body?.displayName === "string" ? request.body.displayName.trim() : "";
+  if (inviteCode.length < 20 || displayName.length < 1 || displayName.length > 100) {
+    response.status(400).json({ error: "invalid_request" });
+    return;
+  }
+
+  try {
+    const joined = await store.joinWithInvite(inviteCode, displayName);
+    response.status(201).json({
+      profile: joined.profile,
+      workspace: joined.workspace,
+      apiKey: joined.apiKey,
+      warning: "This API key is shown once. Store it securely and never commit it.",
+    });
+  } catch (error) {
+    if (error instanceof Error && "code" in error && error.code === "invalid_invite") {
+      response.status(400).json({ error: "invalid_invite" });
+      return;
+    }
+    response.status(500).json({ error: "internal_error" });
+  }
+});
+
+app.post("/mcp", async (request, response) => {
+  const identity = await authenticator.authenticate(request);
+  if (!identity) {
+    response
+      .status(401)
+      .set("WWW-Authenticate", 'Bearer realm="context-bridge"')
+      .json({ error: "unauthorized" });
+    return;
+  }
+
+  await store.ensureUser(identity);
+  const server = createMcpServer(store, identity);
+  const transport = new StreamableHTTPServerTransport({ sessionIdGenerator: undefined });
+  response.on("close", () => {
+    void transport.close();
+    void server.close();
+  });
+  await server.connect(transport);
+  await transport.handleRequest(request, response, request.body);
+});
+
+app.get("/mcp", (_request, response) => {
+  response.status(405).set("Allow", "POST").json({ error: "method_not_allowed" });
+});
+
+app.delete("/mcp", (_request, response) => {
+  response.status(405).set("Allow", "POST").json({ error: "method_not_allowed" });
+});
+
+app.listen(port, () => {
+  console.log(`Context Bridge listening on http://localhost:${port}`);
+});
