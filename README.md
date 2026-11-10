@@ -25,13 +25,48 @@ Codex 账号 B / 设备 B ─┼─ HTTPS ─ 唯一的共享 MCP 服务 ─ 持
 Codex 账号 C / 设备 C ─┘
 ```
 
-- 插件包：`plugin.json`、`mcp.json` 和 `skills/context-bridge/SKILL.md`。
+- 插件包：`plugin.json`、`mcp.json`、`skills/context-bridge-*` 下的可移植 Agent Skills，以及 `hooks/` 下的半自动同步 Hooks。
 - MCP 服务：`server/`，提供账号身份、工作区、邀请和检查点工具。
 - 权限：`owner`、`editor`、`viewer`。
 - 开发认证：邀请引导后签发个人 API Key，仅用于本地/私有测试。
 - 生产认证：必须替换成 OAuth 2.1 + PKCE、稳定 profile ID、scope 和服务端令牌校验。
 
 所有设备必须连接 `mcp.json` 中同一个普通公网 HTTPS 地址。设备不得各自运行独立数据仓库，否则邀请码和工作区无法互认。该架构不依赖 OpenAI Platform Tunnel；任何能够长期运行 Node.js、保存持久化数据并提供 HTTPS 的主机都可以承载服务。详细设计见 [`docs/ARCHITECTURE.md`](docs/ARCHITECTURE.md)。
+
+## 独立安装 Agent Skills
+
+Context Bridge 的工作流程已拆分为四个可单独安装的 Skill：
+
+- `context-bridge-join`：新账号或新设备加入工作区；
+- `context-bridge-publish`：发布当前工作检查点；
+- `context-bridge-resume`：读取检查点并继续工作；
+- `context-bridge-share`：创建工作区和一次性邀请。
+
+先预览本地安装计划：
+
+```powershell
+node .\scripts\install-agent-skills.mjs --agent cursor --scope project --dry-run
+```
+
+确认后去掉 `--dry-run`。支持的目标是 `codex`、`claude-code`、`cursor`、`github-copilot` 和 `all`。安装器只复制 Skill 文件，不联网、不发布 GitHub，也不会写入 MCP 凭据。完整说明见 [`docs/SKILLS.md`](docs/SKILLS.md)。
+
+## 一条命令打开终端控制台
+
+在 Windows CMD 中进入项目目录后运行：
+
+```cmd
+context-bridge
+```
+
+在 PowerShell 中运行：
+
+```powershell
+.\context-bridge.cmd
+```
+
+控制台会显示中文编号菜单。输入编号即可完成初始化、启动/停止服务、启动/停止临时隧道、复制 owner 连接信息、创建工作区和邀请码、加入工作区、开启局域网访问及安装 Agent Skills。详细说明见 [`docs/CONSOLE.zh-CN.md`](docs/CONSOLE.zh-CN.md)。
+
+如果需要了解每条底层命令，可使用 [`docs/MANUAL.zh-CN.md`](docs/MANUAL.zh-CN.md) 简明版，或按照 [`docs/MANUAL-DETAILED.zh-CN.md`](docs/MANUAL-DETAILED.zh-CN.md) 从零逐步操作。
 
 ## 临时跨设备测试
 
@@ -144,6 +179,10 @@ npm run typecheck
 4. 账号 A 创建 workspace 和一次性 `editor`/`viewer` 邀请。
 5. 新设备按照 [`docs/INSTALL.md`](docs/INSTALL.md) 运行 `scripts/join-workspace.ps1`，填写邀请码。
 6. A 调用 `publish_checkpoint`，其他设备调用 `get_latest_checkpoint` 恢复工作。
+
+暂不发布 GitHub 时，可在主机和副机分别运行中文控制台，先选择 `[14] 安装/更新本机 Context Bridge 插件`，通过仓库内本地 marketplace 安装，再用 `[12] 将项目连接到插件半自动同步`。插件在打开已连接项目时只读检查新检查点并先展示文件差异；结束有文件修改的工作时询问是否发布。应用和发布都必须得到操作者确认，不会静默覆盖本地文件。详细步骤见 [`docs/CONSOLE.zh-CN.md`](docs/CONSOLE.zh-CN.md#7-项目半自动同步)。
+
+带生命周期 Hook 的版本面向本地或 GitHub marketplace 手动桌面安装。若以后提交公共插件目录，需要另行构建不含本地 Hook 的发布版本。
 
 ## 生产化清单
 

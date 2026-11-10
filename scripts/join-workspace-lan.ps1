@@ -5,7 +5,8 @@ param(
   [ValidateRange(1, 65535)]
   [int]$DiscoveryPort = 8788,
   [ValidateRange(1, 30)]
-  [int]$TimeoutSeconds = 4
+  [int]$TimeoutSeconds = 4,
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
@@ -78,4 +79,5 @@ Write-Warning "LAN onboarding uses HTTP. Use it only on a trusted private networ
 & (Join-Path $PSScriptRoot "join-workspace.ps1") `
   -ServiceUrl $serviceUrl `
   -DisplayName $DisplayName `
-  -AllowPrivateHttp
+  -AllowPrivateHttp `
+  -Force:$Force
