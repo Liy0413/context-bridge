@@ -1,67 +1,40 @@
-# Architecture
+# 架构 · 0.2.0
 
-Context Bridge uses GitHub for distribution and one ordinary public HTTPS service for live collaboration. It does not require OpenAI Platform or Secure MCP Tunnel.
+Context Bridge 由分发包、插件 Hook 和唯一共享服务组成。
 
-```text
-GitHub repository
-├── plugin.json, mcp.json             plugin and MCP distribution metadata
-├── skills/context-bridge-*           four portable Agent Skills
-├── server/                           deployed once by the service operator
-└── scripts/                           onboarding and local Skill installers
+## 分发与运行
 
-Device A ─┐
-Device B ─┼── HTTPS ── one shared MCP service ── persistent store
-Device C ─┘
+- GitHub 保存源码、插件、四个技能以及 Agensi ZIP。
+- 根 `plugin.json` 声明 OpenAI 扩展，指向 `hooks/codex-hooks.json`。
+- Cursor 清单 `.cursor-plugin/plugin.json` 发现 `hooks/hooks.json`。
+- `hooks/context-bridge-semi-auto.mjs` 加载共享实现 `scripts/hooks/context-bridge-semi-auto.mjs`。
+- MCP 服务管理身份、工作区、成员权限、一次性邀请和检查点。所有设备访问同一实例。
+- Agensi 交付四个技能和独立加入脚本，运行时仍需用户自己的 Context Bridge 服务。
 
-Trusted LAN device ── UDP discovery + HTTP onboarding ──┘
-```
+## 项目识别
 
-## Responsibilities
+Hook 从事件工作目录或宿主提供的项目目录查找连接标记。优先使用 `.context-bridge.local.json`；也可以识别工作项目中的 `connection.local.json`。
 
-- GitHub distributes plugin files, installation metadata, source code, and updates.
-- Portable Skills define four separate workflows: join, publish, resume, and
-  share. They can be copied into supported agents without copying or starting
-  the MCP server.
-- The shared MCP service owns identities, memberships, invites, checkpoints, and audit-relevant timestamps.
-- Devices install the plugin and connect to the same `mcp.json` URL. They do not run separate stores.
-- The HTTPS endpoint may be hosted on a VPS, container platform, or another Node.js host. OpenAI Platform Tunnel is not part of the runtime path.
-- Git or a separate object store carries large project files. Checkpoints carry context, hashes, and source references.
+项目标记记录服务地址、工作区和本机凭据文件路径。凭据不随插件分发；`.context-bridge.state.json` 记录本机应用状态和会话文件基线。没有标记的项目直接放行。
 
-## Skill and MCP boundary
+## 会话事件
 
-The Skills contain routing, safety constraints, and repeatable workflow steps.
-They do not contain workspace data, service credentials, or a second storage
-implementation. The MCP server remains the capability boundary for live reads,
-writes, authentication, and role enforcement.
+启动时对项目支持的文本文件建立基线，并读取最新检查点。根据 SHA-256 比较文件，向代理注入摘要和差异。代理必须取得确认后才能应用，对本地修改逐项处理；成功后记录已应用 ID。
 
-The local installer copies Skill folders into verified Codex, Claude Code,
-Cursor, or GitHub Copilot directories. A custom target directory supports other
-agents that implement the same `SKILL.md` format without hard-coding an
-unverified platform layout. MCP connection setup remains host-specific and is
-never performed silently by the Skill installer.
+结束响应时比较文本文件基线，出现尚未询问的变化则请求代理询问是否发布。用户同意后通过发布 Skill 写入工作区。递归保护避免自动续轮重复触发。
 
-## Invite onboarding
+检测排除依赖、构建目录和秘密文件，单文件上限 256 KiB，最多记录 2,000 个文本文件。该机制不能识别所有二进制或超限文件变化。
 
-1. An owner creates a one-time invite with the minimum role and an expiry.
-2. A new device runs `scripts/join-workspace.ps1` and enters the invite code.
-3. `POST /onboarding/join` creates a profile, consumes the invite, and returns a personal API key once.
-4. The helper stores the key only in the Git-ignored `connection.local.json` file.
-5. The user supplies that key when the installed plugin requests authentication.
+## 服务与权限
 
-Invite codes and issued API keys are SHA-256 hashed before persistence. Production should replace API-key bootstrap with OAuth 2.1 while retaining the same workspace membership model.
+加入端点在没有个人凭据时验证邀请码，签发个人 API Key。邀请和凭据以哈希持久化。owner 创建邀请；editor 发布和读取；viewer 读取。
 
-## Optional LAN discovery
+服务端存储是单进程 JSON 文件。检查点保存显式项目记录与文件清单，小型文件可以内联，完整代码和大文件使用 Git 等外部引用。
 
-When explicitly enabled, the same service also listens for the fixed `CONTEXT_BRIDGE_DISCOVER_V1` datagram on UDP 8788. It replies only to the sender with non-secret metadata: protocol version, service ID, HTTP port, and the fact that an invite is required. The client constructs the private IPv4 URL from the UDP sender address, verifies `/health`, and then uses the existing invitation onboarding endpoint.
+## 网络
 
-This is discovery of the existing central service, not peer-to-peer replication and not a second data store. It is disabled by default, uses no API keys in UDP packets, and must be limited by the host firewall to private networks. Because onboarding is plain HTTP on the LAN, it is intended only for trusted home or office networks; public HTTPS remains the normal transport outside the LAN.
+公网使用 HTTPS；可信局域网可通过 UDP 8788 发现同一服务后使用 HTTP 加入。发现报文只携带非秘密元数据，仍需邀请码。LAN 与公网指向同一存储。
 
-## Deployment invariant
+`/health`、`/info`、`/onboarding/join`、`/mcp` 必须由同一服务提供。临时隧道依赖主机在线且地址随重启变化；稳定服务使用固定域名。
 
-Every installed plugin must point at the same stable HTTPS MCP endpoint. The same origin also serves `/onboarding/join`, so invitation onboarding works from a new device before it has an API key. Running one isolated server per device creates unrelated workspaces and is not a supported collaboration topology.
-
-## Network boundary
-
-The public reverse proxy forwards only the Context Bridge HTTP routes to the single service instance. The service itself may remain on a private container network. TLS terminates at the reverse proxy, and `TRUST_PROXY=1` tells Express to trust exactly that proxy hop when applying onboarding rate limits.
-
-For temporary development, a third-party tunnel may forward a random HTTPS URL to `127.0.0.1:8787`. That proves connectivity but is not a distribution endpoint because the URL changes and depends on the operator's computer remaining online.
+部署见 [DEPLOYMENT.md](DEPLOYMENT.md)，用户流程见 [INSTALL.md](INSTALL.md)。

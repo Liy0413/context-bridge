@@ -640,11 +640,11 @@ function Install-LocalContextBridgePlugin {
 
 function Show-HelpPaths {
   Write-Header "操作说明"
-  Write-Host "详细手册："
-  Write-Color "  $projectRoot\docs\MANUAL-DETAILED.zh-CN.md" Cyan
+  Write-Host "安装与连接："
+  Write-Color "  $projectRoot\docs\INSTALL.md" Cyan
   Write-Host ""
-  Write-Host "简明手册："
-  Write-Color "  $projectRoot\docs\MANUAL.zh-CN.md" Cyan
+  Write-Host "控制台说明："
+  Write-Color "  $projectRoot\docs\CONSOLE.zh-CN.md" Cyan
   Write-Host ""
   Write-Host "后台日志："
   Write-Color "  $stateRoot" Cyan
