@@ -1,10 +1,10 @@
-# Public shared service deployment
+# Shared service deployment · 0.2.0
 
 The service operator deploys exactly one Context Bridge service. Client devices do not run the server and do not need OpenAI Platform Tunnel.
 
 ## Stable deployment: domain + Docker + Caddy
 
-This is the recommended small production topology. It requires a Linux host with a public IP, a domain name, Docker, and persistent disk.
+This provides stable HTTPS for the current single-instance service. It requires a Linux host with a public IP, a domain name, Docker, and persistent disk. The current API-key authentication and JSON store remain a private-testing implementation; the hardening requirements below still apply before public production use.
 
 1. Point an `A`/`AAAA` record such as `bridge.example.com` to the host.
 2. Copy `.env.production.example` to `.env.production` outside version control.
@@ -40,7 +40,7 @@ Then configure the distributable plugin:
   -ServiceUrl https://bridge.example.com
 ```
 
-Commit and tag the resulting `mcp.json` only after verification succeeds.
+Publish the resulting `mcp.json` only after verification succeeds. Devices must reinstall or refresh the plugin with console option `[14]`, update the host agent's MCP connection, and use `[12]` to update each linked project's service address. Changing the distributable URL does not update already installed copies or local connection files.
 
 ## Temporary test: Cloudflare Quick Tunnel
 

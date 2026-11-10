@@ -1,36 +1,66 @@
-# Install on another device
+# 安装与连接 · 0.2.0
 
-The repository owner publishes the plugin through its GitHub marketplace. The installed `mcp.json` already points to the shared public HTTPS service; no OpenAI Platform Tunnel or local server is required on a client device.
+本版本使用插件内置 Hook。所有设备连接同一共享服务；每台设备安装一次插件，每个工作项目建立一次连接标记。
 
-A client device then:
+## 准备
 
-1. Installs the marketplace:
-
-   ```sh
-   codex plugin marketplace add Liy0413/context-bridge
-   ```
-
-2. Installs and enables `context-bridge` from the plugin browser.
-3. Runs the onboarding helper from the cloned repository:
-
-   ```powershell
-   .\scripts\join-workspace.ps1 -DisplayName "My laptop"
-   ```
-
-4. Enters the one-time invite code.
-5. Uses the `apiKey` stored in `connection.local.json` when the plugin asks for its bearer credential.
-6. Starts a new Codex conversation and asks Context Bridge to resume the latest checkpoint.
-
-The device must not start its own Context Bridge server. All devices use the shared HTTPS endpoint already embedded in `mcp.json`. If `join-workspace.ps1` reports that the URL is still `bridge.example.com`, the repository owner has not yet configured a real deployment.
-
-## Optional trusted-LAN onboarding
-
-When the server and new device are on the same trusted private network, the new device can discover the server automatically:
+安装 Node.js 20+、Git 和本地 Codex/Cursor。Codex 控制台安装流程还需要终端能执行 `codex`。Windows 在 PowerShell 中运行：
 
 ```powershell
-.\scripts\join-workspace-lan.ps1 -DisplayName "My laptop"
+git clone https://github.com/Liy0413/context-bridge.git
+Set-Location context-bridge
+.\context-bridge.cmd
 ```
 
-The server operator must first set `CONTEXT_BRIDGE_LAN_DISCOVERY=1`, restart the server, and allow TCP 8787 plus UDP 8788 on the private-network firewall. On Windows, run `scripts/enable-lan-access.ps1` from an elevated PowerShell window.
+已有源码时，在没有未提交修改的前提下运行 `git pull --ff-only` 更新。后续命令均在这个仓库目录执行；“工作项目目录”则是你真正要交接的代码目录，可以在其他位置。
 
-Discovery reveals only the service ID and ports. Joining still requires the one-time invite. LAN onboarding uses plain HTTP, so use it only on a trusted home or office network. The plugin continues to use the repository's public HTTPS MCP URL when the device is outside that LAN.
+## 主设备
+
+1. 首次运行 `[1]` 初始化。已经存在凭据和环境文件时不要重复初始化。
+2. `[2]` 启动共享服务，确认控制台显示在线。
+3. 局域网首次运行 `[10]`；跨网络临时测试运行 `[4]`，记录当前隧道地址。长期部署见 [部署说明](DEPLOYMENT.md)。
+4. `[7]` 选择连接地址，创建工作区。创建 `editor` 邀请允许副设备读取和发布，`viewer` 只读。每台新设备使用独立的一次性邀请码。
+5. `[14]` 安装插件。Codex 注册本地 marketplace 并安装 `context-bridge@context-bridge-github`；Cursor 安装到用户本地插件目录。
+6. 按下一节配置 owner MCP 连接，然后用 `[12]` 输入工作项目完整路径和工作区名称。主机选择本机服务地址即可。
+
+## MCP 连接认证
+
+插件内置 Hook 使用项目标记读取本机凭据；代理调用发布、恢复工具还需要完成 MCP 认证。两者都要指向同一个服务。
+
+连接使用 Streamable HTTP，URL 末尾为 `/mcp`，认证方式为 Bearer API Key：
+
+- 主机通过 `[6]` 复制 owner 密钥，并查看服务 URL。
+- 副机从加入时生成的 `connection.local.json` 读取 `mcpUrl` 和个人 `apiKey`。
+
+在代理的 MCP/插件连接设置中填入上述参数，凭据使用代理支持的安全存储。插件安装时读取的 `mcp.json` 可能指向临时测试地址；若与当前服务不符，应使用当前服务地址重新配置，或由运营者更新 `mcp.json` 后重新安装插件。
+
+连接后在工作项目的新对话验证：
+
+```text
+使用 Context Bridge 的 whoami 和 list_workspaces，告诉我身份、工作区和角色，不要显示凭据。
+```
+
+## 副设备
+
+1. 克隆仓库并运行控制台，不运行首次初始化和本地服务。
+2. 同一可信局域网选择 `[9]` 自动发现；公网选择 `[8]` 输入当前服务基础地址，末尾不要带 `/mcp`。
+3. 输入设备名称和主机提供的邀请码。加入成功后个人凭据保存在仓库根目录 `connection.local.json`。
+4. 运行 `[14]` 安装插件，并按上节配置个人 MCP 连接。
+5. 用 Git 等方式取得实际工作项目，再选择 `[12]` 输入本机工作项目完整路径及工作区名称。
+6. 重启 Codex/Cursor，确认插件启用并审核 Hook，在工作项目中新建对话。
+
+`[12]` 只连接现有目录，不下载完整项目。检查点中的内联文件有限，完整代码应通过项目 Git 仓库取得。
+
+## 验证半自动同步
+
+在主机发布一个检查点，副机新建工作项目对话。出现检查点摘要和文件比较后，先确认再应用。实际修改一个受支持的项目文本文件并完成响应，代理应询问是否发布。
+
+Codex 用 `SessionStart`/`Stop`，Cursor 用 `sessionStart`/`stop`，均由插件提供。工作项目通过 `.context-bridge.local.json` 或项目内 `connection.local.json` 识别工作区；`.context-bridge.state.json` 记录本机已应用检查点和变化检测状态。
+
+连接和状态文件不得提交到 Git。Hook 定义或脚本变化后，宿主可能要求重新审核。
+
+## 日常使用
+
+主机保持服务在线；跨网络测试还需隧道在线。已加入设备不用重复邀请码。修改临时服务地址时，同步更新代理 MCP 设置、个人连接文件中的地址，并通过 `[12]` 更新工作项目标记。重新安装插件用 `[14]`。
+
+发现问题时按 [控制台故障处理](CONSOLE.zh-CN.md#故障处理) 排查。

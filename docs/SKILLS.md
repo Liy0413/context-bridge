@@ -1,4 +1,10 @@
-# Portable Agent Skills
+# Portable Agent Skills · 0.2.0
+
+Codex and Cursor users install the complete plugin through console option
+`[14]`, then link their project with `[12]`; see [INSTALL.md](INSTALL.md).
+The standalone installer below supplies the four skills for other supported
+agents. It does not install lifecycle hooks. The Agensi Skill Pack uses the
+same four skills; see [AGENSI.md](AGENSI.md).
 
 Context Bridge keeps one central MCP service and distributes its repeatable
 workflows as portable Agent Skills. A Skill teaches an agent when and how to use
