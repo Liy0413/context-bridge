@@ -1,0 +1,5 @@
+{
+  "name": "context-bridge",
+  "version": "0.2.0",
+  "description": "Share explicit AI-agent work checkpoints and related project artifacts across accounts and devices."
+}

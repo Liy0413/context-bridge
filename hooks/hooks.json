@@ -1,0 +1,20 @@
+{
+  "version": 1,
+  "hooks": {
+    "sessionStart": [
+      {
+        "type": "command",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/context-bridge-semi-auto.mjs\"",
+        "timeout": 30
+      }
+    ],
+    "stop": [
+      {
+        "type": "command",
+        "command": "node \"${CURSOR_PLUGIN_ROOT}/hooks/context-bridge-semi-auto.mjs\"",
+        "timeout": 30,
+        "loop_limit": 1
+      }
+    ]
+  }
+}

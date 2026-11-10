@@ -14,7 +14,7 @@ $projectRoot = Split-Path -Parent $PSScriptRoot
 $serviceBase = $ServiceUrl.TrimEnd("/")
 
 $pluginPath = Join-Path $projectRoot "plugin.json"
-$plugin = Get-Content -Raw $pluginPath | ConvertFrom-Json
+$plugin = Get-Content -Raw -Encoding UTF8 $pluginPath | ConvertFrom-Json
 $plugin | Add-Member -NotePropertyName repository -NotePropertyValue "https://github.com/$Repository" -Force
 $plugin | Add-Member -NotePropertyName homepage -NotePropertyValue "https://github.com/$Repository#readme" -Force
 [System.IO.File]::WriteAllText(
@@ -24,7 +24,7 @@ $plugin | Add-Member -NotePropertyName homepage -NotePropertyValue "https://gith
 )
 
 $mcpPath = Join-Path $projectRoot "mcp.json"
-$mcp = Get-Content -Raw $mcpPath | ConvertFrom-Json
+$mcp = Get-Content -Raw -Encoding UTF8 $mcpPath | ConvertFrom-Json
 $mcp.mcpServers.context_bridge.url = "$serviceBase/mcp"
 [System.IO.File]::WriteAllText(
   $mcpPath,

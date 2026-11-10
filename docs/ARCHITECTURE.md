@@ -4,9 +4,10 @@ Context Bridge uses GitHub for distribution and one ordinary public HTTPS servic
 
 ```text
 GitHub repository
-├── plugin.json, mcp.json, skills/    distributed to every device
+├── plugin.json, mcp.json             plugin and MCP distribution metadata
+├── skills/context-bridge-*           four portable Agent Skills
 ├── server/                           deployed once by the service operator
-└── scripts/join-workspace.ps1        invite onboarding helper
+└── scripts/                           onboarding and local Skill installers
 
 Device A ─┐
 Device B ─┼── HTTPS ── one shared MCP service ── persistent store
@@ -18,10 +19,26 @@ Trusted LAN device ── UDP discovery + HTTP onboarding ──┘
 ## Responsibilities
 
 - GitHub distributes plugin files, installation metadata, source code, and updates.
+- Portable Skills define four separate workflows: join, publish, resume, and
+  share. They can be copied into supported agents without copying or starting
+  the MCP server.
 - The shared MCP service owns identities, memberships, invites, checkpoints, and audit-relevant timestamps.
 - Devices install the plugin and connect to the same `mcp.json` URL. They do not run separate stores.
 - The HTTPS endpoint may be hosted on a VPS, container platform, or another Node.js host. OpenAI Platform Tunnel is not part of the runtime path.
 - Git or a separate object store carries large project files. Checkpoints carry context, hashes, and source references.
+
+## Skill and MCP boundary
+
+The Skills contain routing, safety constraints, and repeatable workflow steps.
+They do not contain workspace data, service credentials, or a second storage
+implementation. The MCP server remains the capability boundary for live reads,
+writes, authentication, and role enforcement.
+
+The local installer copies Skill folders into verified Codex, Claude Code,
+Cursor, or GitHub Copilot directories. A custom target directory supports other
+agents that implement the same `SKILL.md` format without hard-coding an
+unverified platform layout. MCP connection setup remains host-specific and is
+never performed silently by the Skill installer.
 
 ## Invite onboarding
 

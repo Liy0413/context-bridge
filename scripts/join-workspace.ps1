@@ -2,15 +2,20 @@
 param(
   [string]$ServiceUrl,
   [string]$DisplayName,
-  [switch]$AllowPrivateHttp
+  [switch]$AllowPrivateHttp,
+  [switch]$Force
 )
 
 $ErrorActionPreference = "Stop"
 $projectRoot = Split-Path -Parent $PSScriptRoot
 $connectionPath = Join-Path $projectRoot "connection.local.json"
 
+if ((Test-Path -LiteralPath $connectionPath) -and -not $Force) {
+  throw "A connection already exists at '$connectionPath'. Use -Force only if replacing this device identity is intended."
+}
+
 if (-not $ServiceUrl) {
-  $mcpConfig = Get-Content -Raw (Join-Path $projectRoot "mcp.json") | ConvertFrom-Json
+  $mcpConfig = Get-Content -Raw -Encoding UTF8 (Join-Path $projectRoot "mcp.json") | ConvertFrom-Json
   $ServiceUrl = [string]$mcpConfig.mcpServers.context_bridge.url
   $ServiceUrl = $ServiceUrl -replace "/mcp$", ""
 }
@@ -46,7 +51,13 @@ if ($ServiceUrl -match "example\.com" -or ($serviceUri.Scheme -ne "https" -and -
 if (-not $DisplayName) {
   $DisplayName = Read-Host "Name this device or profile"
 }
-$inviteCode = Read-Host "Enter the one-time workspace invite code" -MaskInput
+$secureInvite = Read-Host "Enter the one-time workspace invite code" -AsSecureString
+$invitePointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($secureInvite)
+try {
+  $inviteCode = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($invitePointer)
+} finally {
+  [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($invitePointer)
+}
 
 $body = @{
   inviteCode = $inviteCode
